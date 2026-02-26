@@ -23,11 +23,19 @@ def gauss(A, b):
 
     # Élimination progressive (triangulation)
     for k in range(n - 1):
-        for i in range(k + 1, n):
-            if M[k, k] == 0:
+        # si le pivot est nul, tenter d'échanger avec une ligne suivante ayant
+        # un coefficient non nul dans la même colonne
+        if M[k, k] == 0:
+            for j in range(k + 1, n):
+                if M[j, k] != 0:
+                    M[[k, j]] = M[[j, k]]  # échange des lignes
+                    print(f"Pivot nul en ligne {k}, échange avec la ligne {j}")
+                    break
+            else:
                 print("Erreur: pivot nul détecté!")
                 return None
 
+        for i in range(k + 1, n):
             facteur = M[i, k] / M[k, k]
             M[i, k:] = M[i, k:] - facteur * M[k, k:]
 
@@ -55,11 +63,18 @@ def gauss_jordan(A, b):
 
     # Élimination de Gauss-Jordan
     for k in range(n):
-        # Normalisation du pivot
+        # si le pivot est nul, tenter d'échanger avec une ligne suivante
         if M[k, k] == 0:
-            print("Erreur: pivot nul détecté!")
-            return None
+            for j in range(k + 1, n):
+                if M[j, k] != 0:
+                    M[[k, j]] = M[[j, k]]
+                    print(f"Pivot nul en ligne {k}, échange avec la ligne {j}")
+                    break
+            else:
+                print("Erreur: pivot nul détecté!")
+                return None
 
+        # Normalisation du pivot
         M[k, :] = M[k, :] / M[k, k]
 
         # Élimination sur toutes les lignes (sauf la ligne k)
@@ -96,11 +111,28 @@ def crout(A, b):
             somme = sum(L[i, k] * U[k, j] for k in range(j))
             L[i, j] = A[i, j] - somme
 
-        # Calcul de la ligne j de U
-        for i in range(j + 1, n):
-            if L[j, j] == 0:
+        # Si le pivot L[j,j] est nul, tenter d'échanger avec une ligne suivante
+        if L[j, j] == 0:
+            for r in range(j + 1, n):
+                if L[r, j] != 0:
+                    # échanger les lignes j et r dans A et b
+                    A[[j, r]] = A[[r, j]]
+                    b[[j, r]] = b[[r, j]]
+                    # échanger les lignes déjà calculées de L (colonnes < j)
+                    if j > 0:
+                        L[[j, r], :j] = L[[r, j], :j]
+                    # recalculer la colonne j de L à partir de la nouvelle A
+                    for i in range(j, n):
+                        somme = sum(L[i, k] * U[k, j] for k in range(j))
+                        L[i, j] = A[i, j] - somme
+                    print(f"Pivot nul L[{j},{j}] -> échange des lignes {j} et {r}")
+                    break
+            else:
                 print("Erreur: pivot nul dans la décomposition!")
                 return None
+
+        # Calcul de la ligne j de U
+        for i in range(j + 1, n):
             somme = sum(L[j, k] * U[k, i] for k in range(j))
             U[j, i] = (A[j, i] - somme) / L[j, j]
 
@@ -193,18 +225,34 @@ def menu():
 
         elif choix == "5":
             try:
-                n = int(input("\nTaille du système (n): "))
+                while True:
+                    try:
+                        n = int(input("\nTaille du système (n): "))
+                        break
+                    except ValueError:
+                        print("Erreur: Entrée invalide!")
+
                 A = np.zeros((n, n))
                 b = np.zeros(n)
 
                 print("\nEntrez les coefficients de la matrice A:")
                 for i in range(n):
                     for j in range(n):
-                        A[i, j] = float(input(f"  A[{i + 1},{j + 1}] = "))
+                        while True:
+                            try:
+                                A[i, j] = float(input(f"  A[{i + 1},{j + 1}] = "))
+                                break
+                            except ValueError:
+                                print("Erreur: Entrée invalide!")
 
                 print("\nEntrez le vecteur b:")
                 for i in range(n):
-                    b[i] = float(input(f"  b[{i + 1}] = "))
+                    while True:
+                        try:
+                            b[i] = float(input(f"  b[{i + 1}] = "))
+                            break
+                        except ValueError:
+                            print("Erreur: Entrée invalide!")
 
                 print("\nNouveau système enregistré!")
                 afficher_matrice(A, "Matrice A")
