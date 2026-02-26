@@ -154,13 +154,93 @@ def crout(A, b):
     return x
 
 
+def gauss_seidel(A, b, tol=1e-6, max_iter=100):
+    """
+    Méthode itérative de Gauss-Seidel
+    Résout le système Ax = b
+    """
+    n = len(b)
+    x = np.zeros(n)
+
+    print("=== MÉTHODE DE GAUSS-SEIDEL ===")
+
+    # Vérification dominance diagonale
+    for i in range(n):
+        diag = abs(A[i, i])
+        somme_hors_diag = sum(abs(A[i, j]) for j in range(n) if j != i)
+        if diag < somme_hors_diag:
+            print(f"  Avertissement: matrice non à dominance diagonale (ligne {i}), convergence non garantie.")
+            break
+
+    print(f"\n{'Itération':>10} {'Erreur':>15}")
+    print("-" * 30)
+
+    for iteration in range(1, max_iter + 1):
+        x_old = x.copy()
+
+        for i in range(n):
+            # Utilise les x[j] déjà MIS À JOUR dans la même itération (j < i)
+            somme = np.dot(A[i, :i], x[:i]) + np.dot(A[i, i+1:], x[i+1:])
+            x[i] = (b[i] - somme) / A[i, i]
+
+        erreur = np.linalg.norm(x - x_old, ord=np.inf)
+        print(f"{iteration:>10} {erreur:>15.8f}")
+
+        if erreur < tol:
+            print(f"\nConvergence atteinte en {iteration} itérations.")
+            return x
+
+    print(f"\nAvertissement: pas de convergence après {max_iter} itérations.")
+    return x
+
+
+def jacobi(A, b, tol=1e-6, max_iter=100):
+    """
+    Méthode itérative de Jacobi
+    Résout le système Ax = b
+    """
+    n = len(b)
+    x = np.zeros(n)
+    x_new = np.zeros(n)
+
+    print("=== MÉTHODE DE JACOBI ===")
+
+    # Vérification dominance diagonale (condition de convergence)
+    for i in range(n):
+        diag = abs(A[i, i])
+        somme_hors_diag = sum(abs(A[i, j]) for j in range(n) if j != i)
+        if diag < somme_hors_diag:
+            print(f"  Avertissement: matrice non à dominance diagonale (ligne {i}), convergence non garantie.")
+            break
+
+    print(f"\n{'Itération':>10} {'Erreur':>15}")
+    print("-" * 30)
+
+    for iteration in range(1, max_iter + 1):
+        for i in range(n):
+            # Utilise uniquement les valeurs de l'itération PRÉCÉDENTE
+            somme = np.dot(A[i, :i], x[:i]) + np.dot(A[i, i+1:], x[i+1:])
+            x_new[i] = (b[i] - somme) / A[i, i]
+
+        erreur = np.linalg.norm(x_new - x, ord=np.inf)
+        print(f"{iteration:>10} {erreur:>15.8f}")
+
+        x = x_new.copy()
+
+        if erreur < tol:
+            print(f"\nConvergence atteinte en {iteration} itérations.")
+            return x
+
+    print(f"\nAvertissement: pas de convergence après {max_iter} itérations.")
+    return x
+
+
 def menu():
     """Menu principal"""
     print("\n" + "=" * 50)
     print("MÉTHODES DE TRANSFORMATION LINÉAIRE")
     print("=" * 50)
 
-    # Exemple de système d'équations
     print("\nExemple de système : 3x + 2y - z = 1")
     print("                      2x - 2y + 4z = -2")
     print("                      -x + 0.5y - z = 0")
@@ -177,8 +257,10 @@ def menu():
         print("1. Méthode de Gauss")
         print("2. Méthode de Gauss-Jordan")
         print("3. Méthode de Crout")
-        print("4. Comparer toutes les méthodes")
-        print("5. Entrer un nouveau système")
+        print("4. Méthode de Jacobi")
+        print("5. Méthode de Gauss-Seidel")
+        print("6. Comparer toutes les méthodes")
+        print("7. Entrer un nouveau système")
         print("0. Quitter")
         print("-" * 50)
 
@@ -207,23 +289,46 @@ def menu():
                 print("Vérification Ax =", np.dot(A, x))
 
         elif choix == "4":
-            print("\n" + "=" * 50)
-            print("COMPARAISON DES TROIS MÉTHODES")
-            print("=" * 50)
+            try:
+                tol  = float(input("Tolérance (défaut 1e-6) : ") or 1e-6)
+                mxit = int(input("Max itérations (défaut 100) : ") or 100)
+            except ValueError:
+                tol, mxit = 1e-6, 100
+            x = jacobi(A.copy(), b.copy(), tol=tol, max_iter=mxit)
+            if x is not None:
+                print("Solution:", x)
+                print("Vérification Ax =", np.dot(A, x))
 
+        elif choix == "5":
+            try:
+                tol  = float(input("Tolérance (défaut 1e-6) : ") or 1e-6)
+                mxit = int(input("Max itérations (défaut 100) : ") or 100)
+            except ValueError:
+                tol, mxit = 1e-6, 100
+            x = gauss_seidel(A.copy(), b.copy(), tol=tol, max_iter=mxit)
+            if x is not None:
+                print("Solution:", x)
+                print("Vérification Ax =", np.dot(A, x))
+
+        elif choix == "6":
+            print("\n" + "=" * 50)
+            print("COMPARAISON DES CINQ MÉTHODES")
+            print("=" * 50)
             x1 = gauss(A.copy(), b.copy())
             x2 = gauss_jordan(A.copy(), b.copy())
             x3 = crout(A.copy(), b.copy())
+            x4 = jacobi(A.copy(), b.copy())
+            x5 = gauss_seidel(A.copy(), b.copy())
+            print("\n" + "=" * 50)
+            print("RÉSUMÉ DES SOLUTIONS")
+            print("=" * 50)
+            if x1 is not None: print(f"Gauss:         {x1}")
+            if x2 is not None: print(f"Gauss-Jordan:  {x2}")
+            if x3 is not None: print(f"Crout:         {x3}")
+            if x4 is not None: print(f"Jacobi:        {x4}")
+            if x5 is not None: print(f"Gauss-Seidel:  {x5}")
 
-            if all(x is not None for x in [x1, x2, x3]):
-                print("\n" + "=" * 50)
-                print("RÉSUMÉ DES SOLUTIONS")
-                print("=" * 50)
-                print(f"Gauss:        {x1}")
-                print(f"Gauss-Jordan: {x2}")
-                print(f"Crout:        {x3}")
-
-        elif choix == "5":
+        elif choix == "7":
             try:
                 while True:
                     try:
@@ -231,33 +336,28 @@ def menu():
                         break
                     except ValueError:
                         print("Erreur: Entrée invalide!")
-
                 A = np.zeros((n, n))
                 b = np.zeros(n)
-
                 print("\nEntrez les coefficients de la matrice A:")
                 for i in range(n):
                     for j in range(n):
                         while True:
                             try:
-                                A[i, j] = float(input(f"  A[{i + 1},{j + 1}] = "))
+                                A[i, j] = float(input(f"  A[{i+1},{j+1}] = "))
                                 break
                             except ValueError:
                                 print("Erreur: Entrée invalide!")
-
                 print("\nEntrez le vecteur b:")
                 for i in range(n):
                     while True:
                         try:
-                            b[i] = float(input(f"  b[{i + 1}] = "))
+                            b[i] = float(input(f"  b[{i+1}] = "))
                             break
                         except ValueError:
                             print("Erreur: Entrée invalide!")
-
                 print("\nNouveau système enregistré!")
                 afficher_matrice(A, "Matrice A")
                 print("Vecteur b:", b)
-
             except ValueError:
                 print("\nErreur: Entrée invalide!")
 
