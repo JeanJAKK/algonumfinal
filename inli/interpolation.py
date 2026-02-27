@@ -1,14 +1,12 @@
 """
 =============================================================
   INTERPOLATION NUMÉRIQUE - Menu interactif
-  Méthodes : Lagrange, Newton, Moindres Carrés,
-             Polynomiale (numpy), Quelconque (spline)
-=============================================================
+  Méthodes : Lagrange, Newton, Moindres Carrés
+================================================== =========
 """
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline
 
 
 # ============================================================
@@ -108,22 +106,6 @@ def moindres_carres(xi, yi, degre):
     return poly, coeffs
 
 
-# --------  POLYNOMIALE (numpy polyfit exact si degré = n-1) --------
-
-def interpolation_polynomiale(xi, yi, degre):
-    """Polynôme de degré donné passant au mieux par les points."""
-    coeffs = np.polyfit(xi, yi, degre)
-    poly   = np.poly1d(coeffs)
-    return poly, coeffs
-
-
-# --------   MÉTHODE QUELCONQUE (Spline cubique) --------
-
-def interpolation_spline(xi, yi):
-    """Spline cubique naturelle — méthode quelconque."""
-    spline = CubicSpline(xi, yi)
-    return spline
-
 
 # ============================================================
 # AFFICHAGE DES RÉSULTATS
@@ -161,12 +143,9 @@ MENU = """
   1. Méthode de Lagrange                              
   2. Méthode de Newton (différences divisées)         
   3. Méthode des Moindres Carrés                      
-  4. Méthode Polynomiale (numpy)                      
-  5. Méthode Quelconque (Spline cubique)              
   0. Quitter                                          
 
 """
-
 
 def run_lagrange():
     xi, yi = saisir_points()
@@ -215,41 +194,11 @@ def run_moindres_carres():
     afficher_courbe(xi, yi, x_vals, poly(x_vals), f"Moindres Carrés deg={degre}")
 
 
-def run_polynomiale():
-    xi, yi = saisir_points()
-    degre = saisir_degre(len(xi) - 1)
-    x_target = saisir_point_cible()
-    poly, coeffs = interpolation_polynomiale(xi, yi, degre)
-    valeur = poly(x_target)
-    afficher_resultat("Polynomiale", x_target, valeur)
-    afficher_coefficients(coeffs, "Coefficients (Polynomiale)")
-
-    # Courbe
-    x_vals = np.linspace(xi.min(), xi.max(), 300)
-    afficher_courbe(xi, yi, x_vals, poly(x_vals), f"Polynomiale deg={degre}")
-
-
-def run_spline():
-    xi, yi = saisir_points()
-    # Spline exige des xi triés
-    ordre = np.argsort(xi)
-    xi, yi = xi[ordre], yi[ordre]
-    x_target = saisir_point_cible()
-    spline = interpolation_spline(xi, yi)
-    valeur = float(spline(x_target))
-    afficher_resultat("Spline Cubique", x_target, valeur)
-
-    # Courbe
-    x_vals = np.linspace(xi.min(), xi.max(), 300)
-    afficher_courbe(xi, yi, x_vals, spline(x_vals), "Spline Cubique")
-
 
 ACTIONS = {
     '1': run_lagrange,
     '2': run_newton,
     '3': run_moindres_carres,
-    '4': run_polynomiale,
-    '5': run_spline,
 }
 
 
