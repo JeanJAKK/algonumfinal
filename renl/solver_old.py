@@ -67,7 +67,7 @@ def menu():
         elif choix == "2":
             dichosol(f_sympy, a, b, eps)
         elif choix == "3":
-            newsonsol(f_sympy, x0_newton, eps)
+            newsonsol( x0_newton)
         elif choix == "4":
             cordesol(f_sympy, a, b, eps)
         elif choix == "5":

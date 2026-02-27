@@ -226,7 +226,7 @@ def newsonsol(f_sympy, x0_init, eps):
     f_prime_num = sp.lambdify(x, f_prime, 'numpy')
     f = sp.lambdify(x, f_sympy, "numpy")
 
-    """def newson(x0, eps, max_iter=2000):
+    def newson(x0, eps, max_iter=2000):
         for _ in range(1, max_iter):
             try:
                 fx0 = f(x0)
@@ -244,8 +244,8 @@ def newsonsol(f_sympy, x0_init, eps):
                 x0 = x1
             except Exception:
                 return None
-        return x0, _"""
-    def newson(x0, eps, max_iter=2000):
+        return x0, _
+    """def newson(x0, eps, max_iter=2000):
         for iteration in range(max_iter):
             try:
                 fx0  = f(x0)
@@ -274,16 +274,16 @@ def newsonsol(f_sympy, x0_init, eps):
                     return x1, iteration
                 x0 = x1
             except Exception:
-                return None
-        return sol
+                return x0, iteration
+        return x0, iteration"""
 
     print("\n--- Newton-Raphson ---")
-    sol = newson(x0_init, eps)
+    sol, nb = newson(x0_init, eps)
 
     if sol is not None:
         print(f" Racine approchée : x ≈ {sol}")
-        print(f"   f({sol}) = {f(sol[0])}")
-        print(f"Nombre d'itération : {sol[1]}\n")
+        print(f"   f({sol}) = {f(sol)}")
+        print(f"Nombre d'itération : {nb}\n")
     else:
         print(" Échec de convergence de Newton-Raphson.")
 
@@ -397,16 +397,16 @@ def menu():
         elif choix == "2":
             dichosol(f_sympy, a, b, eps)
         elif choix == "3":
-            newsonsol(f_sympy, x0_newton, eps)
+            newsonsol(f_sympy, a, eps)
         elif choix == "4":
             cordesol(f_sympy, x1_corde, x2_corde , eps)
         elif choix == "5":
             ptfixe(f_sympy, a, b, eps)
             dichosol(f_sympy, a, b, eps)
-            newsonsol(f_sympy, x0_newton, eps)
+            newsonsol(f_sympy, a, eps)
             cordesol(f_sympy, x1_corde, x2_corde , eps)
         else:
-            print("\n⚠ Choix invalide!")
+            print("\n Choix invalide!")
 
 
 # ============================================================
