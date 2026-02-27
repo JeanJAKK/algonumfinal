@@ -32,12 +32,12 @@ def donnee():
             supr = float(supr_str)
 
             if supr <= inf:
-                print("⚠ La borne supérieure doit être > à la borne inférieure.")
+                print(" La borne supérieure doit être > à la borne inférieure.")
                 continue
 
             return inf, supr
         except ValueError:
-            print("⚠ Saisie invalide (valeur non numérique).")
+            print(" Saisie invalide (valeur non numérique).")
 
 
 def pas():
@@ -47,11 +47,11 @@ def pas():
             h_str = input("Pas de balayage h: ")
             h = float(h_str)
             if h <= 0:
-                print("⚠ Le pas doit être > 0.")
+                print(" Le pas doit être > 0.")
                 continue
             return h
         except ValueError:
-            print("⚠ Saisie invalide.")
+            print(" Saisie invalide.")
 
 
 def precision():
@@ -61,7 +61,7 @@ def precision():
             eps_str = input("Précision (exemple: 1e-7 ou 0.000001): ")
             return float(eps_str)
         except ValueError:
-            print("⚠ La valeur n'est pas valide.")
+            print(" La valeur n'est pas valide.")
 
 
 def initial(methode="corde"):
@@ -72,7 +72,7 @@ def initial(methode="corde"):
             xa = float(xa_str)
             return xa
         except ValueError:
-            print("⚠ Saisie invalide.")
+            print(" Saisie invalide.")
 
 
 # ============================================================
@@ -143,7 +143,7 @@ def ptfixe(f_sympy, a, b, eps):
     def point_fixe(g_expr, x0, eps, max_iter=2000):
         g_num = sp.lambdify(x, g_expr, 'numpy')
         f_num = sp.lambdify(x, f_sympy, 'numpy')
-        for _ in range(max_iter):
+        for _ in range(1,max_iter):
             try:
                 x1 = g_num(x0)
                 if np.isnan(x1) or np.isinf(x1):
@@ -161,7 +161,7 @@ def ptfixe(f_sympy, a, b, eps):
     safe_g = filter_safe_g(g_candidates, interval)
 
     if not safe_g:
-        print("⚠ Aucune fonction g(x) valide (|g'(x)| < 1) trouvée.")
+        print(" Aucune fonction g(x) valide (|g'(x)| < 1) trouvée.")
         return
 
     x0 = (interval[0] + interval[1]) / 2
@@ -169,10 +169,10 @@ def ptfixe(f_sympy, a, b, eps):
     solution, nbre_itera = point_fixe(safe_g[0], x0, eps)
 
     if solution is None:
-        print("⚠ Échec de convergence de la méthode du point fixe.")
+        print(" Échec de convergence de la méthode du point fixe.")
         return
 
-    print(f"✔ Racine approchée : x ≈ {solution}")
+    print(f" Racine approchée : x ≈ {solution}")
     print(f"   f({solution}) = {f_num(solution)}")
     print(f"Nombre d'itération : {nbre_itera}\n")
 
@@ -185,7 +185,7 @@ def dichosol(f_sympy, a, b, eps):
         if f(a) * f(b) > 0:
             return None
 
-        for _ in range(2000):
+        for _ in range(1,2000):
             if abs(b - a) <= eps:
                 break
 
@@ -213,11 +213,11 @@ def dichosol(f_sympy, a, b, eps):
     sol, nb_iter = dicho(a, b, eps)
 
     if sol is not None:
-        print(f"✔ Racine approchée : x ≈ {sol}")
+        print(f" Racine approchée : x ≈ {sol}")
         print(f"   f({sol}) = {f(sol)}")
         print(f"Nombre d'itération : {nb_iter}\n")
     else:
-        print("⚠ Aucune solution trouvée par dichotomie.")
+        print(" Aucune solution trouvée par dichotomie.")
 
 
 def newsonsol(f_sympy, x0_init, eps):
@@ -226,8 +226,8 @@ def newsonsol(f_sympy, x0_init, eps):
     f_prime_num = sp.lambdify(x, f_prime, 'numpy')
     f = sp.lambdify(x, f_sympy, "numpy")
 
-    def newson(x0, eps, max_iter=1000):
-        for _ in range(max_iter):
+    """def newson(x0, eps, max_iter=2000):
+        for _ in range(1, max_iter):
             try:
                 fx0 = f(x0)
                 fpx0 = f_prime_num(x0)
@@ -244,17 +244,48 @@ def newsonsol(f_sympy, x0_init, eps):
                 x0 = x1
             except Exception:
                 return None
-        return x0, _
+        return x0, _"""
+    def newson(x0, eps, max_iter=2000):
+        for iteration in range(max_iter):
+            try:
+                fx0  = f(x0)
+                fpx0 = f_prime_num(x0)
+
+                if fpx0 == 0:
+                    return None
+                if np.isnan(fx0) or np.isinf(fx0) or np.isnan(fpx0) or np.isinf(fpx0):
+                    return None
+
+                correction = fx0 / fpx0
+                x1 = x0 - correction              # ← Newton standard
+
+                # ── LINE SEARCH : uniquement si Newton empire la situation ───────
+                if abs(f(x1)) >= abs(fx0):         # Newton n'a pas amélioré → on corrige
+                    alpha = 0.5
+                    for _ in range(10):
+                        x1_ls = x0 - alpha * correction
+                        if abs(f(x1_ls)) < abs(fx0):
+                            x1 = x1_ls            # line search a trouvé mieux → on prend
+                            break
+                        alpha *= 0.5              # sinon on réduit encore
+                # ────────────────────────────────────────────────────────────────
+
+                if abs(x1 - x0) < eps:
+                    return x1, iteration
+                x0 = x1
+            except Exception:
+                return None
+        return sol
 
     print("\n--- Newton-Raphson ---")
     sol = newson(x0_init, eps)
 
     if sol is not None:
-        print(f"✔ Racine approchée : x ≈ {sol}")
+        print(f" Racine approchée : x ≈ {sol}")
         print(f"   f({sol}) = {f(sol[0])}")
         print(f"Nombre d'itération : {sol[1]}\n")
     else:
-        print("⚠ Échec de convergence de Newton-Raphson.")
+        print(" Échec de convergence de Newton-Raphson.")
 
 
 def cordesol(f_sympy, a, b, eps):
@@ -265,7 +296,7 @@ def cordesol(f_sympy, a, b, eps):
         if f(x0) * f(x1) > 0:
             return None
 
-        for _ in range(max_iter):
+        for _ in range(1, max_iter):
             try:
                 fx0 = f(x0)
                 fx1 = f(x1)
@@ -289,11 +320,11 @@ def cordesol(f_sympy, a, b, eps):
     sol = corde(a, b, eps)
 
     if sol is not None:
-        print(f"✔ Racine approchée : x ≈ {sol}")
+        print(f" Racine approchée : x ≈ {sol}")
         print(f"   f({sol}) = {f(sol[0])}")
         print(f"Nombre d'itération : {sol[1]}\n")
     else:
-        print("⚠ Échec de convergence ou pas de changement de signe.")
+        print(" Échec de convergence ou pas de changement de signe.")
 
 
 # ============================================================
@@ -336,11 +367,11 @@ def menu():
         resultat_balayage = balayage(f_num_balayage, inf, supr, h)
         
         if resultat_balayage is None:
-            print("\n⚠ Aucun intervalle de changement de signe détecté. Modifiez les bornes ou le pas.")
+            print("\n Aucun intervalle de changement de signe détecté. Modifiez les bornes ou le pas.")
             continue
         else:
             a, b = resultat_balayage
-            print(f"\n✔ Intervalle détecté pour la racine : [{a}, {b}]")
+            print(f"\n Intervalle détecté pour la racine : [{a}, {b}]")
         
         # 3. Récupération de la précision
         eps = precision()
