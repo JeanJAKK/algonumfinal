@@ -2,6 +2,8 @@
 =============================================================
   INTERPOLATION NUMÉRIQUE - Menu interactif
   Méthodes : Lagrange, Newton, Moindres Carrés
+  (les fonctions d'interpolation retournent désormais une fonction
+   polynomiale à évaluer)
 ================================================== =========
 """
 
@@ -33,7 +35,7 @@ def saisir_point_cible():
 
 
 def saisir_degre(max_degre):
-    """Demande le degré du polynôme (pour moindres carrés / polynomiale)."""
+    """Demande le degré du polynôme (pour moindres carrés)."""
     d = int(input(f"Degré du polynôme (1 à {max_degre}) : "))
     return max(1, min(d, max_degre))
 
@@ -54,18 +56,104 @@ def base_lagrange(x, xi, k):
     return L
 
 
-def interpolation_lagrange(x_target, xi, yi):
-    """Évalue le polynôme de Lagrange en x_target."""
-    n = len(xi)
-    result = 0.0
-    for k in range(n):
-        result += yi[k] * base_lagrange(x_target, xi, k)
-    return result
+def interpolation_lagrange(xi, yi):
+    """Retourne la fonction polynomiale de Lagrange interpolant les points.
+
+    La fonction renvoyée accepte des scalaires ou des tableaux numpy et
+    effectue le calcul en utilisant la base de Lagrange.
+    """
+    def poly(x):
+        n = len(xi)
+        result = 0.0
+        for k in range(n):
+            result += yi[k] * base_lagrange(x, xi, k)
+        return result
+    return poly
 
 
 def polynome_lagrange(x_vals, xi, yi):
-    """Évalue le polynôme de Lagrange sur un tableau de valeurs."""
-    return np.array([interpolation_lagrange(x, xi, yi) for x in x_vals])
+    """Évalue le polynôme de Lagrange sur un tableau de valeurs.
+
+    Ne garde la fonction historique que pour la compatibilité interne.
+    """
+    poly = interpolation_lagrange(xi, yi)
+    return poly(x_vals)
+
+
+def polynome_lagrange_str(xi, yi):
+    """Retourne la représentation polynomiale de Lagrange sous forme de chaîne.
+    
+    Développe le polynôme d'interpolation de Lagrange en forme standard
+    P(x) = a_n*x^n + ... + a_1*x + a_0
+    """
+    n = len(xi)
+    # Créer un vecteur de coefficients en initialisant à 0
+    coeffs = np.zeros(n)
+    
+    # Pour chaque base de Lagrange L_k(x)
+    for k in range(n):
+        # Calculer les coefficients du polynôme L_k(x)
+        # L_k(x) = produit de (x - x_j)/(x_k - x_j) pour j != k
+        
+        # Commencer avec le polynôme [1]
+        L_k_coeffs = np.array([1.0])
+        
+        # Multiplier par (x - x_j) / (x_k - x_j) pour chaque j != k
+        for j in range(n):
+            if j != k:
+                # Diviser par (x_k - x_j)
+                scale = 1.0 / (xi[k] - xi[j])
+                # Créer le polynôme (x - x_j)
+                poly_x_minus_xj = np.array([scale, -scale * xi[j]])
+                # Multiplier les polynômes
+                L_k_coeffs = np.polymul(L_k_coeffs, poly_x_minus_xj)
+        
+        # Ajouter y_k * L_k au polynôme total
+        # Ajuster la taille des vecteurs si nécessaire
+        if len(L_k_coeffs) > len(coeffs):
+            coeffs = np.pad(coeffs, (len(L_k_coeffs) - len(coeffs), 0))
+        coeffs[-(len(L_k_coeffs)):] += yi[k] * L_k_coeffs
+    
+    # Créer une représentation lisible
+    degree = len(coeffs) - 1
+    terms = []
+    
+    for i, coeff in enumerate(coeffs):
+        power = degree - i
+        # Ignorer les termes négligeables
+        if abs(coeff) < 1e-10:
+            continue
+        
+        # Formater le coefficient
+        if power == 0:
+            terms.append(f"{coeff:.6f}")
+        elif power == 1:
+            if abs(coeff - 1.0) < 1e-10:
+                terms.append("x")
+            elif abs(coeff + 1.0) < 1e-10:
+                terms.append("-x")
+            else:
+                terms.append(f"{coeff:.6f}*x")
+        else:
+            if abs(coeff - 1.0) < 1e-10:
+                terms.append(f"x^{power}")
+            elif abs(coeff + 1.0) < 1e-10:
+                terms.append(f"-x^{power}")
+            else:
+                terms.append(f"{coeff:.6f}*x^{power}")
+    
+    # Assembler la chaîne
+    if not terms:
+        return "0"
+    
+    result = terms[0]
+    for term in terms[1:]:
+        if term.startswith("-"):
+            result += " " + term
+        else:
+            result += " + " + term
+    
+    return result
 
 
 # --------  NEWTON (différences divisées) --------
@@ -81,20 +169,39 @@ def differences_divisees(xi, yi):
     return table
 
 
-def interpolation_newton(x_target, xi, table):
-    """Évalue le polynôme de Newton en x_target."""
-    n = len(xi)
-    result = table[0, 0]
-    produit = 1.0
-    for k in range(1, n):
-        produit *= (x_target - xi[k-1])
-        result += table[0, k] * produit
-    return result
+def interpolation_newton(xi, yi):
+    """Construit le polynôme de Newton interpolant et renvoie (poly, table).
+
+    * ``poly`` est une fonction qui accepte des scalaires ou tableaux.
+    * ``table`` est la table des différences divisées, utile pour
+      extraire les coefficients.
+    """
+    table = differences_divisees(xi, yi)
+    def poly(x):
+        n = len(xi)
+        result = table[0, 0]
+        produit = 1.0
+        for k in range(1, n):
+            produit *= (x - xi[k-1])
+            result += table[0, k] * produit
+        return result
+    return poly, table
 
 
 def polynome_newton(x_vals, xi, table):
-    """Évalue le polynôme de Newton sur un tableau de valeurs."""
-    return np.array([interpolation_newton(x, xi, table) for x in x_vals])
+    """Évalue le polynôme de Newton sur un tableau de valeurs.
+
+    Recalcule la valeur en utilisant la table des différences divisées.
+    """
+    def poly(x):
+        n = len(xi)
+        result = table[0, 0]
+        produit = 1.0
+        for k in range(1, n):
+            produit *= (x - xi[k-1])
+            result += table[0, k] * produit
+        return result
+    return poly(x_vals)
 
 
 # --------  MOINDRES CARRÉS --------
@@ -134,7 +241,7 @@ def afficher_coefficients(coeffs, label="Coefficients"):
 
 
 # ============================================================
-#  SECTION 4 : MENU & CONTRÔLEUR PRINCIPAL
+# MENU & CONTRÔLEUR PRINCIPAL
 # ============================================================
 
 MENU = """
@@ -150,20 +257,26 @@ MENU = """
 def run_lagrange():
     xi, yi = saisir_points()
     x_target = saisir_point_cible()
-    valeur = interpolation_lagrange(x_target, xi, yi)
+    # construire la fonction d'interpolation
+    poly = interpolation_lagrange(xi, yi)
+    valeur = poly(x_target)
     afficher_resultat("Lagrange", x_target, valeur)
+    
+    # Afficher le polynôme en forme développée
+    poly_str = polynome_lagrange_str(xi, yi)
+    print(f"\nPolynôme : P(x) = {poly_str}")
 
     # Courbe
     x_vals = np.linspace(xi.min(), xi.max(), 300)
-    y_vals = polynome_lagrange(x_vals, xi, yi)
+    y_vals = poly(x_vals)
     afficher_courbe(xi, yi, x_vals, y_vals, "Lagrange")
 
 
 def run_newton():
     xi, yi = saisir_points()
     x_target = saisir_point_cible()
-    table = differences_divisees(xi, yi)
-    valeur = interpolation_newton(x_target, xi, table)
+    poly, table = interpolation_newton(xi, yi)
+    valeur = poly(x_target)
     afficher_resultat("Newton", x_target, valeur)
 
     # Coefficients (diagonale supérieure de la table)
@@ -172,7 +285,7 @@ def run_newton():
 
     # Courbe
     x_vals = np.linspace(xi.min(), xi.max(), 300)
-    y_vals = polynome_newton(x_vals, xi, table)
+    y_vals = poly(x_vals)
     afficher_courbe(xi, yi, x_vals, y_vals, "Newton")
 
 
