@@ -64,11 +64,11 @@ def precision():
             print("⚠ La valeur n'est pas valide.")
 
 
-def initial():
+def initial(methode="corde"):
     """Valeur initiale pour Newton-Raphson"""
     while True:
         try:
-            xa_str = input("Initialisation x0 pour Newton: ")
+            xa_str = input(f"Initialisation x0 pour {methode}: ")
             xa = float(xa_str)
             return xa
         except ValueError:
@@ -100,7 +100,7 @@ def balayage(f, inf, supr, h):
 
         x0 += h
 
-    return None
+    return inf, supr
 
 
 # ============================================================
@@ -149,7 +149,7 @@ def ptfixe(f_sympy, a, b, eps):
                 if np.isnan(x1) or np.isinf(x1):
                     return None
                 if abs(x1 - x0) < eps:
-                    return x1
+                    return x1, _
                 x0 = x1
             except Exception:
                 return None
@@ -166,7 +166,7 @@ def ptfixe(f_sympy, a, b, eps):
 
     x0 = (interval[0] + interval[1]) / 2
     f_num = sp.lambdify(x, f_sympy, 'numpy')
-    solution = point_fixe(safe_g[0], x0, eps)
+    solution, nbre_itera = point_fixe(safe_g[0], x0, eps)
 
     if solution is None:
         print("⚠ Échec de convergence de la méthode du point fixe.")
@@ -174,6 +174,7 @@ def ptfixe(f_sympy, a, b, eps):
 
     print(f"✔ Racine approchée : x ≈ {solution}")
     print(f"   f({solution}) = {f_num(solution)}")
+    print(f"Nombre d'itération : {nbre_itera}\n")
 
 
 def dichosol(f_sympy, a, b, eps):
@@ -206,14 +207,15 @@ def dichosol(f_sympy, a, b, eps):
             else:
                 a = m
 
-        return (a + b) / 2
+        return (a + b) / 2, _
 
     print("\n--- Dichotomie ---")
-    sol = dicho(a, b, eps)
+    sol, nb_iter = dicho(a, b, eps)
 
     if sol is not None:
         print(f"✔ Racine approchée : x ≈ {sol}")
         print(f"   f({sol}) = {f(sol)}")
+        print(f"Nombre d'itération : {nb_iter}\n")
     else:
         print("⚠ Aucune solution trouvée par dichotomie.")
 
@@ -238,18 +240,19 @@ def newsonsol(f_sympy, x0_init, eps):
                 x1 = x0 - fx0 / fpx0
 
                 if abs(x1 - x0) < eps:
-                    return x1
+                    return x1, _
                 x0 = x1
             except Exception:
                 return None
-        return None
+        return x0, _
 
     print("\n--- Newton-Raphson ---")
     sol = newson(x0_init, eps)
 
     if sol is not None:
         print(f"✔ Racine approchée : x ≈ {sol}")
-        print(f"   f({sol}) = {f(sol)}")
+        print(f"   f({sol}) = {f(sol[0])}")
+        print(f"Nombre d'itération : {sol[1]}\n")
     else:
         print("⚠ Échec de convergence de Newton-Raphson.")
 
@@ -274,7 +277,7 @@ def cordesol(f_sympy, a, b, eps):
                 x2 = x1 - fx1 * (x1 - x0) / denominateur
 
                 if abs(x2 - x1) < eps:
-                    return x2
+                    return x2, _
 
                 x0, x1 = x1, x2
             except Exception:
@@ -287,7 +290,8 @@ def cordesol(f_sympy, a, b, eps):
 
     if sol is not None:
         print(f"✔ Racine approchée : x ≈ {sol}")
-        print(f"   f({sol}) = {f(sol)}")
+        print(f"   f({sol}) = {f(sol[0])}")
+        print(f"Nombre d'itération : {sol[1]}\n")
     else:
         print("⚠ Échec de convergence ou pas de changement de signe.")
 
@@ -345,8 +349,17 @@ def menu():
         x0_newton = None
         if choix == "3" or choix == "5":
             print(f"\n--- Initialisation de Newton (idéalement dans [{a}, {b}]) ---")
-            x0_newton = initial()
+            x0_newton = initial(methode="Newton-Raphson")
         
+        # 5. Pour Corde
+        x0_newton = None
+        if choix == "4" or choix == "5":
+            print(f"\n--- Initialisation de Corde (idéalement dans [{a}, {b}]) ---")
+            print(f"\n ---première initiale value ---" )
+            x1_corde = initial()
+            print(f"\n ---Deuxième initiale value ---" )
+            x2_corde = initial()
+
         # 5. Appel des solveurs
         if choix == "1":
             ptfixe(f_sympy, a, b, eps)
@@ -355,12 +368,12 @@ def menu():
         elif choix == "3":
             newsonsol(f_sympy, x0_newton, eps)
         elif choix == "4":
-            cordesol(f_sympy, a, b, eps)
+            cordesol(f_sympy, x1_corde, x2_corde , eps)
         elif choix == "5":
             ptfixe(f_sympy, a, b, eps)
             dichosol(f_sympy, a, b, eps)
             newsonsol(f_sympy, x0_newton, eps)
-            cordesol(f_sympy, a, b, eps)
+            cordesol(f_sympy, x1_corde, x2_corde , eps)
         else:
             print("\n⚠ Choix invalide!")
 

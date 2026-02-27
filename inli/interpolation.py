@@ -1,10 +1,7 @@
 """
-=============================================================
+============================================================
   INTERPOLATION NUMÉRIQUE - Menu interactif
-  Méthodes : Lagrange, Newton, Moindres Carrés
-  (les fonctions d'interpolation retournent désormais une fonction
-   polynomiale à évaluer)
-================================================== =========
+============================================================
 """
 
 import numpy as np
